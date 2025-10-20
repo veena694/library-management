@@ -1,0 +1,99 @@
+{% extends 'library/base.html' %}
+
+{% block content %}
+<div class="hero fade-in">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">{{ category.icon }}</div>
+    <h1>{{ category.name }}</h1>
+    <p>{{ category.description }}</p>
+    <div style="margin-top: 1.5rem;">
+        <span class="badge badge-primary" style="font-size: 1.1rem; padding: 0.6rem 1.2rem;">
+            📚 {{ page_obj.paginator.count }} books in this category
+        </span>
+    </div>
+</div>
+
+<div style="background: var(--white); padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 5px 20px var(--shadow);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <a href="{% url 'library:categories' %}" class="btn btn-outline">← Back to Categories</a>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <span style="font-weight: 600;">Sort by:</span>
+            <form method="get" style="display: inline;">
+                <select name="sort" onchange="this.form.submit()" style="padding: 0.5rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem;">
+                    <option value="-added_date">Newest First</option>
+                    <option value="title">Title (A-Z)</option>
+                    <option value="-views">Most Popular</option>
+                    <option value="-rating">Highest Rated</option>
+                </select>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card-grid">
+    {% for book in page_obj %}
+    <div class="card fade-in">
+        <div class="card-image" style="display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+            📚
+        </div>
+        <div class="card-content">
+            <h3 class="card-title">{{ book.title }}</h3>
+            <p class="card-text">
+                <strong>By:</strong> {{ book.authors.all|join:", "|truncatewords:2 }}
+            </p>
+            <p class="card-text" style="font-size: 0.85rem; color: #6b7280; min-height: 40px;">
+                {{ book.description|truncatewords:15 }}
+            </p>
+            <div style="margin: 1rem 0;">
+                {% if book.availability == 'available' %}
+                <span class="badge badge-success">✓ Available</span>
+                {% elif book.availability == 'borrowed' %}
+                <span class="badge badge-warning">📚 Borrowed</span>
+                {% else %}
+                <span class="badge badge-danger">✗ {{ book.availability|title }}</span>
+                {% endif %}
+                <span class="badge badge-primary">⭐ {{ book.rating }}</span>
+                <span class="badge badge-primary">👁 {{ book.views }}</span>
+            </div>
+            <a href="{% url 'library:book_detail' book.pk %}" class="btn btn-primary" style="width: 100%; text-align: center;">
+                View Details →
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: var(--white); border-radius: 15px;">
+        <p style="font-size: 1.3rem; color: var(--text);">No books found in this category yet.</p>
+        <a href="{% url 'library:home' %}" class="btn btn-primary" style="margin-top: 1rem;">Browse Other Categories</a>
+    </div>
+    {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page=1" class="page-link">« First</a>
+    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">‹ Previous</a>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+            <span class="page-link active">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+        {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next ›</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}" class="page-link">Last »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="text-align: center; margin: 3rem 0;">
+    <a href="{% url 'library:search' %}?category={{ category.id }}" class="btn btn-primary" style="padding: 1rem 2rem;">
+        🔍 Search within {{ category.name }}
+    </a>
+</div>
+{% endblock %}

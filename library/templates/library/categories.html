@@ -1,0 +1,25 @@
+{% extends 'library/base.html' %}
+
+{% block content %}
+<div class="hero fade-in">
+    <h1>Browse Categories</h1>
+    <p>Explore our collection organized by topics</p>
+</div>
+
+<div class="card-grid">
+    {% for category in categories %}
+    <div class="card fade-in">
+        <div class="card-content" style="text-align: center; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">{{ category.icon }}</div>
+            <h2 class="card-title">{{ category.name }}</h2>
+            <p class="card-text">{{ category.description|truncatewords:15 }}</p>
+            <div style="margin: 1.5rem 0;">
+                <span class="badge badge-primary" style="font-size: 1rem;">📚 {{ category.book_count }} books</span>
+            </div>
+            <a href="{% url 'library:category_books' category.pk %}" class="btn btn-primary">Explore Category →</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

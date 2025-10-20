@@ -1,0 +1,403 @@
+<!-- ============================================ -->
+<!-- FILE: library/templates/library/search.html (UPDATED STATS SECTION) -->
+<!-- ============================================ -->
+{% extends 'library/base.html' %}
+{% load humanize %}
+
+{% block title %}Search Library Resources{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4 text-center mb-4">
+            <i class="fas fa-search me-3"></i>
+            Library Resource Explorer
+        </h1>
+        <p class="lead text-center text-muted">
+            Discover knowledge across our comprehensive digital library collection
+        </p>
+    </div>
+</div>
+
+<!-- CLICKABLE Statistics Cards -->
+<div class="row mb-4" id="statsContainer">
+    <!-- Total Resources Card -->
+    <div class="col-md-3 mb-3">
+        <button class="stats-card-btn w-100" onclick="filterByAll()" data-aos="fadeInUp">
+            <div class="stats-card">
+                <div class="stats-card-content">
+                    <i class="fas fa-book fa-2x mb-3"></i>
+                    <h3 class="fw-bold">{{ total_resources|intcomma }}</h3>
+                    <p class="mb-0">Total Resources</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Available Now Card -->
+    <div class="col-md-3 mb-3">
+        <button class="stats-card-btn w-100" onclick="filterByAvailability('available')" data-aos="fadeInUp" data-aos-delay="100">
+            <div class="stats-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <div class="stats-card-content">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <h3 class="fw-bold">{{ available_resources|intcomma }}</h3>
+                    <p class="mb-0">Available Now</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Digital Access Card -->
+    <div class="col-md-3 mb-3">
+        <button class="stats-card-btn w-100" onclick="filterByAvailability('digital')" data-aos="fadeInUp" data-aos-delay="200">
+            <div class="stats-card" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                <div class="stats-card-content">
+                    <i class="fas fa-cloud-download-alt fa-2x mb-3"></i>
+                    <h3 class="fw-bold">{{ digital_resources|intcomma }}</h3>
+                    <p class="mb-0">Digital Access</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Search Results Card -->
+    <div class="col-md-3 mb-3">
+        <button class="stats-card-btn w-100" onclick="clearAllFilters()" data-aos="fadeInUp" data-aos-delay="300">
+            <div class="stats-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <div class="stats-card-content">
+                    <i class="fas fa-search fa-2x mb-3"></i>
+                    <h3 class="fw-bold" id="resultsCount">{{ results_count|intcomma }}</h3>
+                    <p class="mb-0">Search Results</p>
+                </div>
+            </div>
+        </button>
+    </div>
+</div>
+
+<!-- Active Filter Badge -->
+<div id="activeFilterBadge" style="display: none; margin-bottom: 20px;">
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-filter me-2"></i>
+        <strong>Active Filter:</strong> <span id="filterText"></span>
+        <button type="button" class="btn-close" onclick="clearAllFilters()"></button>
+    </div>
+</div>
+
+<!-- Search Form -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form method="get" class="row g-3">
+            <div class="col-md-12">
+                <div class="input-group input-group-lg">
+                    {{ form.query }}
+                    <button class="btn btn-primary px-4" type="submit">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Filters Row -->
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Resource Type</label>
+                {{ form.resource_type }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Subject</label>
+                {{ form.subject }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Year Range</label>
+                {{ form.year_range }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Availability</label>
+                {{ form.availability }}
+            </div>
+            
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <label class="form-label fw-semibold me-2">Sort by:</label>
+                        {{ form.sort_by }}
+                    </div>
+                    <div>
+                        <a href="{% url 'library:search' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Clear Filters
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Popular Keywords -->
+{% if popular_keywords and not request.GET.query %}
+<div class="mb-4">
+    <h5 class="mb-3"><i class="fas fa-tags me-2"></i>Popular Keywords</h5>
+    <div>
+        {% for keyword in popular_keywords %}
+            <a href="?query={{ keyword.word }}" class="keyword-tag text-decoration-none">
+                {{ keyword.word }} ({{ keyword.frequency }})
+            </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Search Results -->
+{% if resources %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            Found {{ results_count|intcomma }} result{{ results_count|pluralize }}
+            {% if request.GET.query %}for "{{ request.GET.query }}"{% endif %}
+        </h5>
+        
+        {% if page_obj.has_other_pages %}
+            <nav aria-label="Search results pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+    
+    <!-- Results List -->
+    {% for resource in resources %}
+        <div class="card resource-card" data-aos="fadeInUp">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                        <h6 class="card-title mb-2">
+                            <a href="{{ resource.get_absolute_url }}" class="text-decoration-none">
+                                {{ resource.title }}
+                            </a>
+                        </h6>
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-user me-1"></i>{{ resource.author_names }}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-calendar me-1"></i>{{ resource.publication_year }}
+                            {% if resource.publisher %}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-building me-1"></i>{{ resource.publisher }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge resource-type-badge me-2">
+                            {{ resource.resource_type }}
+                        </span>
+                        {% if user.is_authenticated %}
+                            <i class="{% if resource.id in favorite_ids %}fas active{% else %}far{% endif %} fa-heart favorite-btn" 
+                               data-resource-id="{{ resource.id }}"
+                               title="{% if resource.id in favorite_ids %}Remove from favorites{% else %}Add to favorites{% endif %}"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <p class="card-text text-muted small">{{ resource.description|truncatewords:30 }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        {% for keyword in resource.keywords.all|slice:":5" %}
+                            <span class="keyword-tag">{{ keyword.word }}</span>
+                        {% endfor %}
+                        {% if resource.keywords.count > 5 %}
+                            <span class="text-muted small">+{{ resource.keywords.count|add:"-5" }} more</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="text-end">
+                        <small class="text-muted">
+                            <i class="fas fa-eye me-1"></i>{{ resource.view_count }} views
+                            {% if resource.availability == 'available' %}
+                                <span class="badge bg-success ms-2">Available</span>
+                            {% elif resource.availability == 'digital' %}
+                                <span class="badge bg-info ms-2">Digital</span>
+                            {% elif resource.availability == 'checked_out' %}
+                                <span class="badge bg-warning ms-2">Checked Out</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Search results pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+    
+{% elif request.GET %}
+    <!-- No Results -->
+    <div class="text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted mb-3">No resources found</h4>
+        <p class="text-muted mb-4">
+            Try adjusting your search terms or filters
+        </p>
+        <a href="{% url 'library:search' %}" class="btn btn-outline-primary">
+            <i class="fas fa-times me-1"></i>Clear All Filters
+        </a>
+    </div>
+{% else %}
+    <!-- Welcome Message -->
+    <div class="text-center py-5">
+        <i class="fas fa-book-open fa-3x text-primary mb-3"></i>
+        <h4 class="mb-3">Welcome to Library Resource Explorer</h4>
+        <p class="text-muted mb-4">
+            Click the cards above to see all resources, available books, or digital content. Use search to find specific resources.
+        </p>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-search fa-2x text-primary mb-3"></i>
+                        <h6>Quick Search</h6>
+                        <p class="small text-muted">Enter any keyword to find relevant resources instantly</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-filter fa-2x text-primary mb-3"></i>
+                        <h6>Advanced Filters</h6>
+                        <p class="small text-muted">Use filters to find exactly what you're looking for</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-heart fa-2x text-primary mb-3"></i>
+                        <h6>Save Favorites</h6>
+                        <p class="small text-muted">
+                            {% if user.is_authenticated %}
+                                Create your personal collection of resources
+                            {% else %}
+                                <a href="{% url 'library:login' %}">Login</a> to save your favorite resources
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<style>
+.stats-card-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.stats-card-btn:hover {
+    transform: translateY(-8px);
+}
+
+.stats-card-btn:hover .stats-card {
+    transform: scale(1.05);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2) !important;
+}
+
+.stats-card-btn:active {
+    transform: translateY(-4px);
+}
+</style>
+
+<script>
+function filterByAll() {
+    window.location.href = '{% url "library:search" %}';
+}
+
+function filterByAvailability(availability) {
+    const url = new URL(window.location);
+    url.searchParams.set('availability', availability);
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+}
+
+function clearAllFilters() {
+    window.location.href = '{% url "library:search" %}';
+}
+
+// Show active filter badge if any filter is applied
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const availability = urlParams.get('availability');
+    const query = urlParams.get('query');
+    const resourceType = urlParams.get('resource_type');
+    const subject = urlParams.get('subject');
+    const yearRange = urlParams.get('year_range');
+    
+    let filterText = '';
+    
+    if (availability) {
+        filterText = availability === 'available' ? 'Showing: Available Resources' : 
+                     availability === 'digital' ? 'Showing: Digital Access' : '';
+    } else if (query) {
+        filterText = `Search: "${query}"`;
+    } else if (resourceType || subject || yearRange) {
+        filterText = 'Custom Filters Applied';
+    }
+    
+    if (filterText) {
+        document.getElementById('filterText').textContent = filterText;
+        document.getElementById('activeFilterBadge').style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

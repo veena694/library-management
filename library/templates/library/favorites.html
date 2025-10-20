@@ -1,0 +1,134 @@
+{% extends 'library/base.html' %}
+{% load humanize %}
+
+{% block title %}My Favorites - Library Explorer{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold mb-3">
+            <i class="fas fa-heart text-danger me-2"></i>My Favorite Resources
+        </h2>
+        <p class="text-muted">
+            You have {{ total_favorites }} favorite resource{{ total_favorites|pluralize }}
+        </p>
+    </div>
+</div>
+
+{% if favorites %}
+    <div class="row">
+        {% for favorite in favorites %}
+            <div class="col-md-12 mb-3">
+                <div class="card resource-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-2">
+                                    <a href="{{ favorite.resource.get_absolute_url }}" class="text-decoration-none">
+                                        {{ favorite.resource.title }}
+                                    </a>
+                                </h5>
+                                <p class="text-muted small mb-2">
+                                    <i class="fas fa-user me-1"></i>{{ favorite.resource.author_names }}
+                                    <span class="mx-2">|</span>
+                                    <i class="fas fa-calendar me-1"></i>{{ favorite.resource.publication_year }}
+                                    {% if favorite.resource.publisher %}
+                                        <span class="mx-2">|</span>
+                                        <i class="fas fa-building me-1"></i>{{ favorite.resource.publisher }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge resource-type-badge me-2">
+                                    {{ favorite.resource.resource_type }}
+                                </span>
+                                <i class="fas fa-heart favorite-btn active" 
+                                   data-resource-id="{{ favorite.resource.id }}"
+                                   title="Remove from favorites"></i>
+                            </div>
+                        </div>
+                        
+                        <p class="card-text text-muted small mb-3">
+                            {{ favorite.resource.description|truncatewords:30 }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% for keyword in favorite.resource.keywords.all|slice:":5" %}
+                                    <span class="keyword-tag">{{ keyword.word }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">
+                                    Added {{ favorite.date_added|naturaltime }}
+                                    {% if favorite.resource.availability == 'available' %}
+                                        <span class="badge bg-success ms-2">Available</span>
+                                    {% elif favorite.resource.availability == 'digital' %}
+                                        <span class="badge bg-info ms-2">Digital</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if favorites.has_other_pages %}
+        <nav aria-label="Favorites pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if favorites.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ favorites.previous_page_number }}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ favorites.number }} of {{ favorites.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if favorites.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ favorites.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ favorites.paginator.num_pages }}">Last</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+{% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <i class="far fa-heart fa-5x text-muted mb-4"></i>
+        <h4 class="mb-3">No Favorites Yet</h4>
+        <p class="text-muted mb-4">
+            Start adding resources to your favorites to keep track of books, articles, and materials you're interested in.
+        </p>
+        <a href="{% url 'library:search' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-search me-2"></i>Explore Resources
+        </a>
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Reload page when favorite is removed
+    $('.favorite-btn').click(function() {
+        setTimeout(function() {
+            location.reload();
+        }, 1000);
+    });
+</script>
+{% endblock %}

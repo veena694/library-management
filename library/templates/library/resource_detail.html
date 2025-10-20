@@ -1,0 +1,379 @@
+{% extends 'library/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ resource.title }} - Library Resource{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <!-- Resource Header -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="flex-grow-1">
+                        <h2 class="mb-2">{{ resource.title }}</h2>
+                        <p class="text-muted lead mb-0">{{ resource.author_names }}</p>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge resource-type-badge me-2">
+                            {{ resource.resource_type }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Publication Details -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Publication Details</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Year:</strong> {{ resource.publication_year }}</li>
+                            {% if resource.publisher %}
+                                <li><strong>Publisher:</strong> {{ resource.publisher }}</li>
+                            {% endif %}
+                            {% if resource.pages %}
+                                <li><strong>Pages:</strong> {{ resource.pages }}</li>
+                            {% endif %}
+                            {% if resource.language %}
+                                <li><strong>Language:</strong> {{ resource.language }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Library Information</h6>
+                        <ul class="list-unstyled">
+                            {% if resource.call_number %}
+                                <li><strong>Call Number:</strong> {{ resource.call_number }}</li>
+                            {% endif %}
+                            {% if resource.location %}
+                                <li><strong>Location:</strong> {{ resource.location }}</li>
+                            {% endif %}
+                            <li><strong>Availability:</strong> 
+                                {% if resource.availability == 'available' %}
+                                    <span class="badge bg-success">Available in Library</span>
+                                {% elif resource.availability == 'digital' %}
+                                    <span class="badge bg-info">Digital Access</span>
+                                {% elif resource.availability == 'checked_out' %}
+                                    <span class="badge bg-warning">Checked Out</span>
+                                {% elif resource.availability == 'restricted' %}
+                                    <span class="badge bg-secondary">Restricted</span>
+                                {% endif %}
+                            </li>
+                            <li><strong>Views:</strong> {{ resource.view_count|intcomma }}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div class="mb-4">
+                    <h5><i class="fas fa-info-circle me-2"></i>Description</h5>
+                    <p class="text-muted">{{ resource.description }}</p>
+                </div>
+                
+                <!-- Abstract -->
+                {% if resource.abstract %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-file-alt me-2"></i>Abstract</h5>
+                    <p class="text-muted">{{ resource.abstract }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Keywords -->
+                <div class="mb-4">
+                    <h5><i class="fas fa-tags me-2"></i>Keywords</h5>
+                    <div>
+                        {% for keyword in resource.keywords.all %}
+                            <a href="{% url 'library:search' %}?query={{ keyword.word }}" 
+                               class="keyword-tag text-decoration-none">
+                                {{ keyword.word }}
+                            </a>
+                        {% empty %}
+                            <p class="text-muted">No keywords available</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Subjects -->
+                <div class="mb-4">
+                    <h5><i class="fas fa-bookmark me-2"></i>Subjects</h5>
+                    <div>
+                        {% for subject in resource.subjects.all %}
+                            <a href="{% url 'library:search' %}?subject={{ subject.id }}" 
+                               class="badge bg-light text-dark text-decoration-none me-2">
+                                {{ subject.name }}
+                            </a>
+                        {% empty %}
+                            <p class="text-muted">No subjects assigned</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Identifiers -->
+                {% if resource.isbn or resource.doi %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-hashtag me-2"></i>Identifiers</h5>
+                    <ul class="list-unstyled">
+                        {% if resource.isbn %}
+                            <li><strong>ISBN:</strong> {{ resource.isbn }}</li>
+                        {% endif %}
+                        {% if resource.doi %}
+                            <li><strong>DOI:</strong> 
+                                <a href="https://doi.org/{{ resource.doi }}" target="_blank">
+                                    {{ resource.doi }} <i class="fas fa-external-link-alt ms-1"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title"><i class="fas fa-bolt me-2"></i>Actions</h6>
+                <div class="d-grid gap-2">
+                    <!-- ACCESS/DOWNLOAD BUTTON -->
+                    {% if resource.url %}
+                        <a href="{{ resource.url }}" class="btn btn-success btn-lg" target="_blank">
+                            <i class="fas fa-cloud-download-alt me-2"></i>
+                            Download / Access Online
+                        </a>
+                    {% elif resource.availability == 'digital' %}
+                        <button class="btn btn-info btn-lg" disabled>
+                            <i class="fas fa-file-pdf me-2"></i>
+                            Digital Resource
+                        </button>
+                    {% elif resource.availability == 'available' %}
+                        <button class="btn btn-primary btn-lg" onclick="requestResource()">
+                            <i class="fas fa-book me-2"></i>
+                            Request This Book
+                        </button>
+                    {% elif resource.availability == 'checked_out' %}
+                        <button class="btn btn-warning btn-lg" onclick="joinWaitlist()">
+                            <i class="fas fa-clock me-2"></i>
+                            Join Waitlist
+                        </button>
+                    {% elif resource.availability == 'restricted' %}
+                        <button class="btn btn-secondary btn-lg" disabled>
+                            <i class="fas fa-lock me-2"></i>
+                            Restricted Access
+                        </button>
+                    {% endif %}
+
+                    <!-- FAVORITE BUTTON -->
+                    {% if user.is_authenticated %}
+                        <button class="btn {% if is_favorited %}btn-danger{% else %}btn-outline-primary{% endif %} favorite-btn-action" 
+                                data-resource-id="{{ resource.id }}" id="favBtn">
+                            <i class="{% if is_favorited %}fas{% else %}far{% endif %} fa-heart me-1"></i>
+                            {% if is_favorited %}Remove from Favorites{% else %}Add to Favorites{% endif %}
+                        </button>
+                    {% else %}
+                        <a href="{% url 'library:login' %}?next={{ request.path }}" class="btn btn-outline-primary">
+                            <i class="far fa-heart me-1"></i>Login to Save
+                        </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Print Details
+                    </button>
+                    
+                    <button class="btn btn-outline-info" onclick="shareResource()">
+                        <i class="fas fa-share me-1"></i>Share
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Box based on Resource Type -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                {% if resource.resource_type.name == 'book' %}
+                    <div class="alert alert-info border-0" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Physical Book</strong><br>
+                        <small>Available for borrowing from the library. Contact the librarian for checkout.</small>
+                    </div>
+                {% elif resource.resource_type.name == 'digital' %}
+                    <div class="alert alert-info border-0" role="alert">
+                        <i class="fas fa-laptop me-2"></i>
+                        <strong>Digital Resource</strong><br>
+                        <small>Access this resource online instantly.</small>
+                    </div>
+                {% else %}
+                    <div class="alert alert-primary border-0" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>{{ resource.resource_type }}</strong><br>
+                        <small>Academic resource available for research.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Authors -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title"><i class="fas fa-users me-2"></i>Authors</h6>
+                {% for author in resource.authors.all %}
+                    <div class="mb-2">
+                        <strong>{{ author.full_name }}</strong>
+                        {% if author.email %}
+                            <br><small class="text-muted">{{ author.email }}</small>
+                        {% endif %}
+                    </div>
+                    {% if not forloop.last %}<hr>{% endif %}
+                {% empty %}
+                    <p class="text-muted mb-0">No authors listed</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Related Resources -->
+        {% if related_resources %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title"><i class="fas fa-link me-2"></i>Related Resources</h6>
+                {% for related in related_resources %}
+                    <div class="mb-3">
+                        <a href="{{ related.get_absolute_url }}" class="text-decoration-none">
+                            <strong class="d-block">{{ related.title|truncatewords:8 }}</strong>
+                        </a>
+                        <small class="text-muted">
+                            {{ related.author_names|truncatewords:3 }} ({{ related.publication_year }})
+                        </small>
+                    </div>
+                    {% if not forloop.last %}<hr>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Resource Statistics -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="fas fa-chart-bar me-2"></i>Statistics</h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h5 class="mb-0 text-primary">{{ resource.view_count }}</h5>
+                            <small class="text-muted">Views</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="mb-0 text-success">{{ resource.download_count }}</h5>
+                        <small class="text-muted">Downloads</small>
+                    </div>
+                </div>
+                <hr>
+                <small class="text-muted">
+                    <strong>Added:</strong> {{ resource.date_added|date:"M d, Y" }}<br>
+                    <strong>Updated:</strong> {{ resource.date_updated|date:"M d, Y" }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<script>
+function getCsrfToken() {
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+}
+
+function requestResource() {
+    showToast('Request sent! Librarian will contact you soon.', 'success');
+}
+
+function joinWaitlist() {
+    showToast('You have been added to the waitlist!', 'info');
+}
+
+function shareResource() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ resource.title|escapejs }}',
+            text: '{{ resource.description|truncatewords:20|escapejs }}',
+            url: window.location.href
+        }).catch(err => console.log('Error sharing:', err));
+    } else {
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            showToast('URL copied to clipboard!', 'success');
+        }).catch(err => {
+            showToast('Could not copy URL', 'error');
+        });
+    }
+}
+
+function showToast(message, type = 'success') {
+    const alertClass = type === 'error' ? 'alert-danger' : `alert-${type}`;
+    const toast = document.createElement('div');
+    toast.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Attach favorite button event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const favBtn = document.getElementById('favBtn');
+    
+    if (favBtn) {
+        favBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const resourceId = this.getAttribute('data-resource-id');
+            const csrfToken = getCsrfToken();
+            
+            console.log('Favorite clicked for resource:', resourceId);
+            
+            fetch(`/favorite/${resourceId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response:', data);
+                
+                if (data.favorited !== undefined) {
+                    if (data.favorited) {
+                        favBtn.classList.remove('btn-outline-primary');
+                        favBtn.classList.add('btn-danger');
+                        favBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Remove from Favorites';
+                    } else {
+                        favBtn.classList.remove('btn-danger');
+                        favBtn.classList.add('btn-outline-primary');
+                        favBtn.innerHTML = '<i class="far fa-heart me-1"></i>Add to Favorites';
+                    }
+                    showToast(data.message, 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error updating favorite', 'error');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

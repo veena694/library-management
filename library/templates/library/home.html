@@ -1,0 +1,74 @@
+{% extends 'library/base.html' %}
+
+{% block content %}
+<div class="hero fade-in">
+    <h1>Discover Your Next Great Read</h1>
+    <p>Search through thousands of books with our advanced keyword-based system</p>
+    
+    <div class="search-box">
+        <form action="{% url 'library:search' %}" method="get" class="search-form">
+            <input type="text" name="q" class="search-input" placeholder="Search by title, author, keywords..." required>
+            <button type="submit" class="search-btn">🔍 Search</button>
+        </form>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card fade-in">
+        <div class="stat-number">{{ total_books }}</div>
+        <div class="stat-label">Total Books</div>
+    </div>
+    <div class="stat-card fade-in">
+        <div class="stat-number">{{ total_categories }}</div>
+        <div class="stat-label">Categories</div>
+    </div>
+    <div class="stat-card fade-in">
+        <div class="stat-number">24/7</div>
+        <div class="stat-label">Available</div>
+    </div>
+</div>
+
+<h2 style="color: white; margin: 3rem 0 1rem; font-size: 2rem;">📖 Featured Books</h2>
+<div class="card-grid">
+    {% for book in featured_books %}
+    <div class="card fade-in">
+        <div class="card-image" style="display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+            📚
+        </div>
+        <div class="card-content">
+            <h3 class="card-title">{{ book.title }}</h3>
+            <p class="card-text">
+                <strong>Authors:</strong> {{ book.authors.all|join:", " }}
+            </p>
+            <p class="card-text">
+                <strong>Category:</strong> {{ book.category.name }}
+            </p>
+            <div style="margin: 1rem 0;">
+                {% if book.availability == 'available' %}
+                <span class="badge badge-success">✓ Available</span>
+                {% else %}
+                <span class="badge badge-danger">✗ Not Available</span>
+                {% endif %}
+                <span class="badge badge-primary">👁 {{ book.views }} views</span>
+            </div>
+            <a href="{% url 'library:book_detail' book.pk %}" class="btn btn-primary" style="width: 100%; text-align: center;">View Details</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<h2 style="color: white; margin: 3rem 0 1rem; font-size: 2rem;">🗂 Browse by Category</h2>
+<div class="card-grid">
+    {% for category in categories %}
+    <div class="card fade-in">
+        <div class="card-content" style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">{{ category.icon }}</div>
+            <h3 class="card-title">{{ category.name }}</h3>
+            <p class="card-text">{{ category.book_count }} books available</p>
+            <a href="{% url 'library:category_books' category.pk %}" class="btn btn-outline">Explore →</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

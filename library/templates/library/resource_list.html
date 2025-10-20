@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Resources</title>
+</head>
+<body>
+    <h1>Library Resources</h1>
+    <ul>
+        {% for resource in resources %}
+            <li>
+                <a href="{% url 'library:resource_detail' resource.pk %}">
+                    {{ resource.title }}
+                </a> ({{ resource.resource_type }})
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
