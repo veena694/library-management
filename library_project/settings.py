@@ -27,11 +27,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-v$5jeo$k^8)n@+tq-la4(
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['.railway.app', 'library-management4.up.railway.app', 'localhost', '127.0.0.1']
 
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://library-management4.up.railway.app'
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -176,6 +179,7 @@ if settings.DEBUG:
 # Static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_URL = '/static/'
 
 # Whitenoise middleware
 MIDDLEWARE.insert(0, 'whitenoise.middleware.WhiteNoiseMiddleware')
